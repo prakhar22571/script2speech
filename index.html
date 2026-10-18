@@ -8,14 +8,13 @@
   :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
   body { max-width: 42rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
   label { display: block; font-weight: 600; margin-top: 1.25rem; }
-  fieldset { border: 0; padding: 0; margin: 0; }
+  summary { font-weight: 600; margin-top: 1.25rem; cursor: pointer; }
   textarea, select, input[type=text] { width: 100%; box-sizing: border-box; font: inherit; padding: .5rem; }
   #script { min-height: 14rem; }
   small { opacity: .75; }
   button { margin-top: 1.5rem; font: inherit; padding: .6rem 1.4rem; cursor: pointer; }
   .error { color: #d33; }
   audio { width: 100%; }
-  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
@@ -46,15 +45,15 @@
       <option value="c5f56a6cc2ec4fa8920cb4c5889a3fb7">Slax: smooth, crisp</option>
       <option value="802e3bc2b27e49c2995d23ef70e6ac89">Energetic Male: promo, upbeat</option>
     </optgroup>
-    <option value="clone">Clone from a sample…</option>
   </select>
 
-  <fieldset id="cloneBox" hidden disabled>
+  <details id="clone">
+    <summary>Or clone a voice from your own sample</summary>
     <label for="sample">Voice sample (10–30 s clip, max 15 MB)</label>
-    <input type="file" id="sample" required accept="audio/*">
+    <input type="file" id="sample" accept="audio/*">
     <label for="transcript">Transcript of the sample (optional)</label>
     <textarea id="transcript" rows="3" placeholder="What's said in the clip. Improves accuracy."></textarea>
-  </fieldset>
+  </details>
 
   <button id="go">Generate audio</button>
   <p id="status" role="status"></p>
@@ -73,9 +72,7 @@
     if (f) $('script').value = await f.text();
   };
 
-  $('voice').onchange = () => {
-    $('cloneBox').hidden = $('cloneBox').disabled = $('voice').value !== 'clone';
-  };
+  $('clone').ontoggle = () => { $('sample').required = $('voice').disabled = $('clone').open; };
 
   const dataUrl = f => new Promise((ok, fail) => {
     const r = new FileReader();
@@ -86,17 +83,17 @@
 
   $('form').onsubmit = async e => {
     e.preventDefault();
-    const v = $('voice').value, status = $('status');
+    const status = $('status');
     $('go').disabled = true;
     status.className = '';
     status.textContent = 'Generating… long scripts can take a few minutes.';
     try {
       const body = { text: $('script').value };
-      if (v === 'clone') {
+      if ($('clone').open) {
         body.sample = await dataUrl($('sample').files[0]);
         body.transcript = $('transcript').value.trim();
       } else {
-        body.voice = v;
+        body.voice = $('voice').value;
       }
       const res = await fetch('/api/speak', {
         method: 'POST',
