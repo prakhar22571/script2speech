@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Script to Speech</title>
+<style>
+  :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+  body { max-width: 42rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+  label { display: block; font-weight: 600; margin-top: 1.25rem; }
+  fieldset { border: 0; padding: 0; margin: 0; }
+  textarea, select, input[type=text] { width: 100%; box-sizing: border-box; font: inherit; padding: .5rem; }
+  #script { min-height: 14rem; }
+  small { opacity: .75; }
+  button { margin-top: 1.5rem; font: inherit; padding: .6rem 1.4rem; cursor: pointer; }
+  .error { color: #d33; }
+  audio { width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<h1>Script to Speech</h1>
+<form id="form">
+  <label for="file">Script file (.txt / .md)</label>
+  <input type="file" id="file" accept=".txt,.md,text/plain,text/markdown">
+
+  <label for="script">Script</label>
+  <textarea id="script" required placeholder="Upload a file or paste your script here…"></textarea>
+  <small>Add emotion tags inline, e.g. <code>[whispering]</code>, <code>[excited]</code>, <code>[sad][sighing]</code>.</small>
+
+  <label for="voice">Voice</label>
+  <select id="voice">
+    <option value="">Model default</option>
+    <optgroup label="Female">
+      <option value="933563129e564b19a115bedd57b7406a">Sarah: soft, narration</option>
+      <option value="b347db033a6549378b48d00acb0d06cd">Selene: calm, meditative</option>
+      <option value="9a9cf47702da476aa4629e2506d4a857">Hannah: professional, confident</option>
+      <option value="c2623f0c075b4492ac367989aee1576f">Paula: educational, conversational</option>
+      <option value="b545c585f631496c914815291da4e893">Friendly: bright, energetic</option>
+      <option value="5567200c7d8341738f0892bbacd3be3c">Féminine: calm, French accent</option>
+      <option value="5161d41404314212af1254556477c17d">Genki: gentle, Japanese accent</option>
+    </optgroup>
+    <optgroup label="Male">
+      <option value="536d3a5e000945adb7038665781a4aca">Ethan: clear narration</option>
+      <option value="bf322df2096a46f18c579d0baa36f41d">Adrian: deep, measured</option>
+      <option value="c5f56a6cc2ec4fa8920cb4c5889a3fb7">Slax: smooth, crisp</option>
+      <option value="802e3bc2b27e49c2995d23ef70e6ac89">Energetic Male: promo, upbeat</option>
+    </optgroup>
+    <optgroup label="Other">
+      <option value="custom">Custom Fish voice ID…</option>
+      <option value="clone">Clone from a sample…</option>
+    </optgroup>
+  </select>
+
+  <fieldset id="customBox" hidden disabled>
+    <label for="customId">Fish voice ID</label>
+    <input type="text" id="customId" required pattern="[0-9a-f]{32}" placeholder="32-character ID" title="32 lowercase hex characters">
+    <small>Browse voices at <a href="https://fish.audio" target="_blank" rel="noopener">fish.audio</a>. The ID is the last part of a voice's URL.</small>
+  </fieldset>
+
+  <fieldset id="cloneBox" hidden disabled>
+    <label for="sample">Voice sample (10–30 s clip, max 15 MB)</label>
+    <input type="file" id="sample" required accept="audio/*">
+    <label for="transcript">Transcript of the sample (optional)</label>
+    <textarea id="transcript" rows="3" placeholder="What's said in the clip. Improves accuracy."></textarea>
+  </fieldset>
+
+  <button id="go">Generate audio</button>
+  <p id="status" role="status"></p>
+</form>
+
+<div id="result" hidden>
+  <audio id="player" controls></audio>
+  <p><a id="download" download="speech.mp3">Download MP3</a></p>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  $('file').onchange = async e => {
+    const f = e.target.files[0];
+    if (f) $('script').value = await f.text();
+  };
+
+  $('voice').onchange = () => {
+    const v = $('voice').value;
+    $('customBox').hidden = $('customBox').disabled = v !== 'custom';
+    $('cloneBox').hidden = $('cloneBox').disabled = v !== 'clone';
+  };
+
+  const dataUrl = f => new Promise((ok, fail) => {
+    const r = new FileReader();
+    r.onload = () => ok(r.result);
+    r.onerror = () => fail(r.error);
+    r.readAsDataURL(f);
+  });
+
+  $('form').onsubmit = async e => {
+    e.preventDefault();
+    const v = $('voice').value, status = $('status');
+    $('go').disabled = true;
+    status.className = '';
+    status.textContent = 'Generating… long scripts can take a few minutes.';
+    try {
+      const body = { text: $('script').value };
+      if (v === 'clone') {
+        body.sample = await dataUrl($('sample').files[0]);
+        body.transcript = $('transcript').value.trim();
+      } else {
+        body.voice = v === 'custom' ? $('customId').value : v;
+      }
+      const res = await fetch('/api/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+      URL.revokeObjectURL($('download').href);
+      $('player').src = $('download').href = URL.createObjectURL(await res.blob());
+      $('result').hidden = false;
+      status.textContent = 'Done.';
+    } catch (err) {
+      status.className = 'error';
+      status.textContent = err.message;
+    } finally {
+      $('go').disabled = false;
+    }
+  };
+</script>
+</body>
+</html>
