@@ -26,13 +26,12 @@
   h1 {
     width: fit-content; margin: 0; font-size: clamp(2rem, 7vw, 2.9rem); letter-spacing: -.02em;
     background: linear-gradient(90deg, var(--cyan), var(--violet), var(--pink));
-    -webkit-background-clip: text; background-clip: text; color: transparent;
+    background-clip: text; color: transparent;
     filter: drop-shadow(0 0 14px rgba(157, 92, 255, .6));
   }
   label { display: block; margin: 1.6rem 0 .5rem; font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
   textarea, select { width: 100%; box-sizing: border-box; padding: .8rem 1rem; font: inherit; color: inherit; background: rgba(6, 6, 22, .75); border: 1px solid var(--line); border-radius: .8rem; transition: border-color .2s, box-shadow .2s; }
   textarea { resize: vertical; }
-  #script { min-height: 14rem; }
   textarea:focus-visible, select:focus-visible { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(41, 231, 255, .2), 0 0 22px rgba(41, 231, 255, .35); }
   select:disabled { opacity: .35; cursor: not-allowed; }
   option, optgroup { background: #0d0c24; color: var(--text); }
@@ -68,10 +67,10 @@
 <h1>Script to Speech</h1>
 <form id="form">
   <label for="file">Script file (.txt / .md)</label>
-  <input type="file" id="file" accept=".txt,.md,text/plain,text/markdown">
+  <input type="file" id="file" accept=".txt,.md">
 
   <label for="script">Script</label>
-  <textarea id="script" required placeholder="Upload a file or paste your script here…"></textarea>
+  <textarea id="script" rows="8" required placeholder="Upload a file or paste your script here…"></textarea>
   <small>Add emotion tags inline, e.g. <code>[whispering]</code>, <code>[excited]</code>, <code>[sad][sighing]</code>.</small>
 
   <label for="voice">Voice</label>
@@ -115,19 +114,9 @@
 <script>
   const $ = id => document.getElementById(id);
 
-  $('file').onchange = async e => {
-    const f = e.target.files[0];
-    if (f) $('script').value = await f.text();
-  };
+  $('file').onchange = async e => { if (e.target.files[0]) $('script').value = await e.target.files[0].text(); };
 
   $('clone').ontoggle = () => { $('sample').required = $('voice').disabled = $('clone').open; };
-
-  const dataUrl = f => new Promise((ok, fail) => {
-    const r = new FileReader();
-    r.onload = () => ok(r.result);
-    r.onerror = () => fail(r.error);
-    r.readAsDataURL(f);
-  });
 
   $('form').onsubmit = async e => {
     e.preventDefault();
@@ -138,7 +127,8 @@
     try {
       const body = { text: $('script').value };
       if ($('clone').open) {
-        body.sample = await dataUrl($('sample').files[0]);
+        const f = $('sample').files[0];
+        body.sample = `data:${f.type || 'application/octet-stream'};base64,${new Uint8Array(await f.arrayBuffer()).toBase64()}`;
         body.transcript = $('transcript').value.trim();
       } else {
         body.voice = $('voice').value;
