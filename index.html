@@ -46,17 +46,8 @@
       <option value="c5f56a6cc2ec4fa8920cb4c5889a3fb7">Slax: smooth, crisp</option>
       <option value="802e3bc2b27e49c2995d23ef70e6ac89">Energetic Male: promo, upbeat</option>
     </optgroup>
-    <optgroup label="Other">
-      <option value="custom">Custom Fish voice ID…</option>
-      <option value="clone">Clone from a sample…</option>
-    </optgroup>
+    <option value="clone">Clone from a sample…</option>
   </select>
-
-  <fieldset id="customBox" hidden disabled>
-    <label for="customId">Fish voice ID</label>
-    <input type="text" id="customId" required pattern="[0-9a-f]{32}" placeholder="32-character ID" title="32 lowercase hex characters">
-    <small>Browse voices at <a href="https://fish.audio" target="_blank" rel="noopener">fish.audio</a>. The ID is the last part of a voice's URL.</small>
-  </fieldset>
 
   <fieldset id="cloneBox" hidden disabled>
     <label for="sample">Voice sample (10–30 s clip, max 15 MB)</label>
@@ -83,9 +74,7 @@
   };
 
   $('voice').onchange = () => {
-    const v = $('voice').value;
-    $('customBox').hidden = $('customBox').disabled = v !== 'custom';
-    $('cloneBox').hidden = $('cloneBox').disabled = v !== 'clone';
+    $('cloneBox').hidden = $('cloneBox').disabled = $('voice').value !== 'clone';
   };
 
   const dataUrl = f => new Promise((ok, fail) => {
@@ -107,7 +96,7 @@
         body.sample = await dataUrl($('sample').files[0]);
         body.transcript = $('transcript').value.trim();
       } else {
-        body.voice = v === 'custom' ? $('customId').value : v;
+        body.voice = v;
       }
       const res = await fetch('/api/speak', {
         method: 'POST',
