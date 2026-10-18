@@ -4,20 +4,67 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Script to Speech</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400..700&display=swap">
 <style>
-  :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
-  body { max-width: 42rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
-  label { display: block; font-weight: 600; margin-top: 1.25rem; }
-  summary { font-weight: 600; margin-top: 1.25rem; cursor: pointer; }
-  textarea, select, input[type=text] { width: 100%; box-sizing: border-box; font: inherit; padding: .5rem; }
+  :root {
+    color-scheme: dark; font-family: Montserrat, system-ui, sans-serif;
+    --cyan: #29e7ff; --violet: #9d5cff; --pink: #ff4fd8;
+    --text: #e8eaff; --muted: #9ba3c9; --line: rgba(157, 92, 255, .3);
+  }
+  body {
+    margin: 0; padding: clamp(1.5rem, 6vh, 4rem) 1rem; color: var(--text); line-height: 1.5;
+    background:
+      radial-gradient(45rem 35rem at 0 0, rgba(255, 79, 216, .22), transparent 60%) fixed,
+      radial-gradient(45rem 35rem at 100% 15%, rgba(41, 231, 255, .18), transparent 60%) fixed,
+      #070716;
+  }
+  main {
+    max-width: 42rem; margin: 0 auto; padding: clamp(1.25rem, 5vw, 2.5rem);
+    background: rgba(16, 14, 40, .6); border: 1px solid var(--line); border-radius: 1.5rem;
+    backdrop-filter: blur(14px); box-shadow: 0 0 50px rgba(157, 92, 255, .18), 0 30px 80px rgba(0, 0, 0, .55);
+  }
+  h1 {
+    width: fit-content; margin: 0; font-size: clamp(2rem, 7vw, 2.9rem); letter-spacing: -.02em;
+    background: linear-gradient(90deg, var(--cyan), var(--violet), var(--pink));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 14px rgba(157, 92, 255, .6));
+  }
+  label { display: block; margin: 1.6rem 0 .5rem; font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  textarea, select { width: 100%; box-sizing: border-box; padding: .8rem 1rem; font: inherit; color: inherit; background: rgba(6, 6, 22, .75); border: 1px solid var(--line); border-radius: .8rem; transition: border-color .2s, box-shadow .2s; }
+  textarea { resize: vertical; }
   #script { min-height: 14rem; }
-  small { opacity: .75; }
-  button { margin-top: 1.5rem; font: inherit; padding: .6rem 1.4rem; cursor: pointer; }
-  .error { color: #d33; }
-  audio { width: 100%; }
+  textarea:focus-visible, select:focus-visible { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(41, 231, 255, .2), 0 0 22px rgba(41, 231, 255, .35); }
+  select:disabled { opacity: .35; cursor: not-allowed; }
+  option, optgroup { background: #0d0c24; color: var(--text); }
+  input[type=file] { font: inherit; font-size: .9rem; color: var(--muted); }
+  ::file-selector-button { margin-right: .8rem; padding: .45rem 1.1rem; font: inherit; font-weight: 600; color: var(--cyan); background: transparent; border: 1px solid var(--cyan); border-radius: 999px; cursor: pointer; transition: background .2s, box-shadow .2s; }
+  ::file-selector-button:hover { background: rgba(41, 231, 255, .1); box-shadow: 0 0 16px rgba(41, 231, 255, .5); }
+  small { display: block; margin-top: .6rem; font-size: .85rem; color: var(--muted); }
+  code { padding: .1rem .4rem; border-radius: .4rem; font-size: .85em; color: var(--pink); background: rgba(255, 79, 216, .12); }
+  summary { margin-top: 1.6rem; font-weight: 600; color: var(--cyan); cursor: pointer; }
+  summary::marker { color: var(--pink); }
+  summary:hover { text-shadow: 0 0 12px rgba(41, 231, 255, .8); }
+  button {
+    width: 100%; margin-top: 2rem; padding: .95rem 1.5rem; font: inherit; font-weight: 700; letter-spacing: .04em; color: #0a0a1f;
+    background: linear-gradient(90deg, var(--cyan), var(--violet), var(--pink)); border: 0; border-radius: .9rem; cursor: pointer;
+    box-shadow: 0 0 26px rgba(157, 92, 255, .5); transition: box-shadow .2s, filter .2s;
+  }
+  button:hover { box-shadow: 0 0 40px rgba(255, 79, 216, .65); }
+  button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+  button:disabled { cursor: progress; filter: saturate(.5) brightness(.8); }
+  #status { min-height: 1.5em; margin: 1rem 0 0; text-align: center; color: var(--muted); }
+  #status.error { color: #ff5c8a; }
+  form:has(#go:disabled) #status { color: var(--cyan); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  #result { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+  audio { width: 100%; border-radius: 999px; box-shadow: 0 0 26px rgba(41, 231, 255, .3); }
+  #download { display: inline-block; margin-top: 1rem; padding: .5rem 1.2rem; font-weight: 600; color: var(--pink); text-decoration: none; border: 1px solid var(--pink); border-radius: 999px; transition: box-shadow .2s; }
+  #download:hover { box-shadow: 0 0 18px rgba(255, 79, 216, .55); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
+<main>
 <h1>Script to Speech</h1>
 <form id="form">
   <label for="file">Script file (.txt / .md)</label>
@@ -61,8 +108,9 @@
 
 <div id="result" hidden>
   <audio id="player" controls></audio>
-  <p><a id="download" download="speech.mp3">Download MP3</a></p>
+  <a id="download" download="speech.mp3">Download MP3</a>
 </div>
+</main>
 
 <script>
   const $ = id => document.getElementById(id);
